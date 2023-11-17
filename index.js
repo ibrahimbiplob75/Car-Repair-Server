@@ -58,19 +58,33 @@ async function run() {
     const database = client.db("CarService").collection("Services");
     const bookingDB=client.db("CarService").collection("bookingCollect");
 
+
+
+
     //user data
     app.post("/jwt",async(req,res)=>{
-      const user=req.body;
-      // console.log(user);
-      const token=jwt.sign(user,process.env.ACCESS_TOKEN,{expiresIn:'1hr'});
-      //console.log(token);
-      res.cookie("token",token,{
-        httpOnly:true,
-        secure:true,
-        sameSite:"none"
-      })
-      .send({success:true});
-    })
+        const user=req.body;
+        console.log("Token base user",user);
+        const token=jwt.sign(user,process.env.ACCESS_TOKEN,{expiresIn:"1hr"});
+
+        res.cookie("token",token,{
+          httpOnly:true,
+          secure:true,
+          sameSite:"none",
+        })
+        .send({success:true});
+    });
+
+         app.post('/logout', async (req, res) => {
+            const user = req.body;
+            console.log('logging out', user);
+            res.clearCookie('token', { maxAge: 0 }).send({ success: true })
+        })
+
+
+
+
+
 
     //product data
     app.get("/data",logger,async(req,res)=>{
@@ -89,16 +103,15 @@ async function run() {
 
     app.post("/booking",async(req,res)=>{
       const booked=req.body;
-      const cookie=req.cookies;
-       //console.log(booked,cookie);
       const result= await bookingDB.insertOne(booked);
       res.send(result);
     });
 
     app.get("/booking",verifyToken,async(req,res)=>{
       let query={};
-      if(req.query?.email){
-          query={email: req.query.email}
+      if(req.query?.email !== req.user.email){
+          //query={email: req.query.email}
+          return res.status(401).send({ message: 'unauthorized access invalid' });
       }
       const result=await bookingDB.find(query).toArray();
       res.send(result);
